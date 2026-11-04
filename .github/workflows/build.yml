@@ -55,8 +55,8 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path src | Out-Null
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/master/stb_image.h" -OutFile "src/stb_image.h"
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/master/stb_image_resize.h" -OutFile "src/stb_image_resize.h"
-
+          # Menggunakan commit lama karena stb_image_resize.h sudah dihapus dari master
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/5c205738c191bcb0abc65c4febfa9a7bb94304f3/stb_image_resize.h" -OutFile "src/stb_image_resize.h"
       # ---------- Build sender.exe (x64) ----------
       - name: Compile sender
         shell: cmd
