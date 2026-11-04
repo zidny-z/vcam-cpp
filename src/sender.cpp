@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include <vector>
 
-#include "softcam/softcam.h"
+#include <softcam/softcam.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
