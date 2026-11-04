@@ -14,23 +14,55 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      # ---------- Debug: Lihat struktur direktori ----------
+      - name: Inspect Repository Structure
+        shell: pwsh
+        run: |
+          Write-Host "--- Isi folder external/softcam ---"
+          Get-ChildItem -Path external/softcam -Force
+          Write-Host "--- Mencari file .sln ---"
+          Get-ChildItem -Path external/softcam -Filter *.sln -Recurse
+
       # ---------- Build Softcam DLL ----------
+      # Coba gunakan softcam.sln (VS2022), jika gagal coba softcam_vs2019.sln
       - name: Build Softcam x64
-        run: msbuild external/softcam/softcam.sln /p:Configuration=Release /p:Platform=x64 /m
+        shell: cmd
+        run: |
+          if exist external\softcam\softcam.sln (
+            msbuild external\softcam\softcam.sln /p:Configuration=Release /p:Platform=x64 /m
+          ) else if exist external\softcam\softcam_vs2019.sln (
+            msbuild external\softcam\softcam_vs2019.sln /p:Configuration=Release /p:Platform=x64 /m
+          ) else (
+            echo "Solution file tidak ditemukan! & exit /b 1
+          )
 
       - name: Build Softcam Win32
-        run: msbuild external/softcam/softcam.sln /p:Configuration=Release /p:Platform=Win32 /m
+        shell: cmd
+        run: |
+          if exist external\softcam\softcam.sln (
+            msbuild external\softcam\softcam.sln /p:Configuration=Release /p:Platform=Win32 /m
+          ) else if exist external\softcam\softcam_vs2019.sln (
+            msbuild external\softcam\softcam_vs2019.sln /p:Configuration=Release /p:Platform=Win32 /m
+          ) else (
+            echo "Solution file tidak ditemukan! & exit /b 1
+          )
 
       # ---------- Build Installer ----------
       - name: Build Softcam Installer x64
-        run: msbuild external/softcam/examples/softcam_installer/softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /m
+        shell: cmd
+        run: |
+          msbuild external\softcam\examples\softcam_installer\softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Build Softcam Installer Win32
-        run: msbuild external/softcam/examples/softcam_installer/softcam_installer.sln /p:Configuration=Release /p:Platform=Win32 /m
+        shell: cmd
+        run: |
+          msbuild external\softcam\examples\softcam_installer\softcam_installer.sln /p:Configuration=Release /p:Platform=Win32 /m
+
       # ---------- Download stb headers ----------
       - name: Download stb headers
         shell: pwsh
@@ -59,10 +91,11 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item sender.exe dist\
           Copy-Item assets\fotoorang2.jpeg dist\
-          Copy-Item external\softcam\dist\bin\x64\softcam.dll dist\
-          Copy-Item external\softcam\dist\bin\Win32\softcam.dll dist\softcam_x86.dll
-          Copy-Item external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe dist\
-          Copy-Item external\softcam\examples\softcam_installer\Win32\Release\softcam_installer.exe dist\softcam_installer_x86.exe
+          # Cek keberadaan DLL sebelum copy
+          if (Test-Path external\softcam\dist\bin\x64\softcam.dll) { Copy-Item external\softcam\dist\bin\x64\softcam.dll dist\ }
+          if (Test-Path external\softcam\dist\bin\Win32\softcam.dll) { Copy-Item external\softcam\dist\bin\Win32\softcam.dll dist\softcam_x86.dll }
+          if (Test-Path external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe) { Copy-Item external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe dist\ }
+          if (Test-Path external\softcam\examples\softcam_installer\Win32\Release\softcam_installer.exe) { Copy-Item external\softcam\examples\softcam_installer\Win32\Release\softcam_installer.exe dist\softcam_installer_x86.exe }
           Get-ChildItem dist
 
       - name: Upload artifact
