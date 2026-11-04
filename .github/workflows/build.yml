@@ -19,17 +19,21 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Setup MSVC dev environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       # ---------- Debug: Lihat struktur direktori ----------
       - name: Inspect Repository Structure
         shell: pwsh
         run: |
           Write-Host "--- Isi folder external/softcam ---"
-          Get-ChildItem -Path external/softcam -Force
+          if (Test-Path external/softcam) { Get-ChildItem -Path external/softcam -Force }
           Write-Host "--- Mencari file .sln ---"
-          Get-ChildItem -Path external/softcam -Filter *.sln -Recurse
+          if (Test-Path external/softcam) { Get-ChildItem -Path external/softcam -Filter *.sln -Recurse }
 
       # ---------- Build Softcam DLL ----------
-      # Coba gunakan softcam.sln (VS2022), jika gagal coba softcam_vs2019.sln
       - name: Build Softcam x64
         shell: cmd
         run: |
@@ -38,7 +42,7 @@ jobs:
           ) else if exist external\softcam\softcam_vs2019.sln (
             msbuild external\softcam\softcam_vs2019.sln /p:Configuration=Release /p:Platform=x64 /m
           ) else (
-            echo "Solution file tidak ditemukan! & exit /b 1
+            echo "Solution file tidak ditemukan!" & exit /b 1
           )
 
       - name: Build Softcam Win32
@@ -49,33 +53,33 @@ jobs:
           ) else if exist external\softcam\softcam_vs2019.sln (
             msbuild external\softcam\softcam_vs2019.sln /p:Configuration=Release /p:Platform=Win32 /m
           ) else (
-            echo "Solution file tidak ditemukan! & exit /b 1
+            echo "Solution file tidak ditemukan!" & exit /b 1
           )
 
       # ---------- Build Installer ----------
       - name: Build Softcam Installer x64
         shell: cmd
         run: |
-          msbuild external\softcam\examples\softcam_installer\softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /m
+          if exist external\softcam\examples\softcam_installer\softcam_installer.sln (
+            msbuild external\softcam\examples\softcam_installer\softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /m
+          )
 
       - name: Build Softcam Installer Win32
         shell: cmd
         run: |
-          msbuild external\softcam\examples\softcam_installer\softcam_installer.sln /p:Configuration=Release /p:Platform=Win32 /m
+          if exist external\softcam\examples\softcam_installer\softcam_installer.sln (
+            msbuild external\softcam\examples\softcam_installer\softcam_installer.sln /p:Configuration=Release /p:Platform=Win32 /m
+          )
 
       # ---------- Download stb headers ----------
       - name: Download stb headers
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force -Path src | Out-Null
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/master/stb_image.h" -OutFile "src/stb_image.h"
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/master/stb_image_resize.h" -OutFile "src/stb_image_resize.h"
 
       # ---------- Build sender.exe (x64) ----------
-      - name: Setup MSVC dev environment
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
       - name: Compile sender
         shell: cmd
         run: |
@@ -89,9 +93,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item sender.exe dist\
-          Copy-Item assets\fotoorang2.jpeg dist\
-          # Cek keberadaan DLL sebelum copy
+          if (Test-Path sender.exe) { Copy-Item sender.exe dist\ }
+          if (Test-Path assets\fotoorang2.jpeg) { Copy-Item assets\fotoorang2.jpeg dist\ }
           if (Test-Path external\softcam\dist\bin\x64\softcam.dll) { Copy-Item external\softcam\dist\bin\x64\softcam.dll dist\ }
           if (Test-Path external\softcam\dist\bin\Win32\softcam.dll) { Copy-Item external\softcam\dist\bin\Win32\softcam.dll dist\softcam_x86.dll }
           if (Test-Path external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe) { Copy-Item external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe dist\ }
