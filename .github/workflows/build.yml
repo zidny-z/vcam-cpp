@@ -20,18 +20,17 @@ jobs:
 
       # ---------- Build Softcam DLL ----------
       - name: Build Softcam x64
-        run: msbuild external/softcam/src/softcam/softcam.vcxproj /p:Configuration=Release /p:Platform=x64 /m
+        run: msbuild external/softcam/softcam.sln /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Build Softcam Win32
-        run: msbuild external/softcam/src/softcam/softcam.vcxproj /p:Configuration=Release /p:Platform=Win32 /m
+        run: msbuild external/softcam/softcam.sln /p:Configuration=Release /p:Platform=Win32 /m
 
       # ---------- Build Installer ----------
       - name: Build Softcam Installer x64
-        run: msbuild external/softcam/examples/softcam_installer/softcam_installer.vcxproj /p:Configuration=Release /p:Platform=x64 /m
+        run: msbuild external/softcam/examples/softcam_installer/softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Build Softcam Installer Win32
-        run: msbuild external/softcam/examples/softcam_installer/softcam_installer.vcxproj /p:Configuration=Release /p:Platform=Win32 /m
-
+        run: msbuild external/softcam/examples/softcam_installer/softcam_installer.sln /p:Configuration=Release /p:Platform=Win32 /m
       # ---------- Download stb headers ----------
       - name: Download stb headers
         shell: pwsh
