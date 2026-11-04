@@ -12,7 +12,6 @@ jobs:
     steps:
       - name: Checkout Repo Sender
         uses: actions/checkout@v4
-        # Kita hapus submodules: recursive karena kita akan clone manual
 
       - name: Clone Softcam Repository
         shell: pwsh
@@ -28,60 +27,27 @@ jobs:
         with:
           arch: x64
 
-      # ---------- Debug: Lihat struktur direktori ----------
-      - name: Inspect Repository Structure
-        shell: pwsh
-        run: |
-          Write-Host "--- Isi folder external/softcam ---"
-          if (Test-Path external/softcam) { Get-ChildItem -Path external/softcam -Force }
-          Write-Host "--- Mencari file .sln ---"
-          if (Test-Path external/softcam) { Get-ChildItem -Path external/softcam -Filter *.sln -Recurse }
-
-      # ---------- Build Softcam DLL ----------
+      # ---------- Build Softcam DLL (Skip Tests) ----------
       - name: Build Softcam x64
-        shell: pwsh
+        shell: cmd
         run: |
-          $sln = Get-ChildItem -Path external/softcam -Filter *.sln -Recurse | Select-Object -First 1
-          if ($sln) {
-            Write-Host "Solution ditemukan: $($sln.FullName)"
-            msbuild $sln.FullName /p:Configuration=Release /p:Platform=x64 /m
-          } else {
-            Write-Error "File .sln tidak ditemukan!"
-            exit 1
-          }
+          msbuild external\softcam\src\softcam\softcam_vs2019.vcxproj /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Build Softcam Win32
-        shell: pwsh
+        shell: cmd
         run: |
-          $sln = Get-ChildItem -Path external/softcam -Filter *.sln -Recurse | Select-Object -First 1
-          if ($sln) {
-            msbuild $sln.FullName /p:Configuration=Release /p:Platform=Win32 /m
-          } else {
-            Write-Error "File .sln tidak ditemukan!"
-            exit 1
-          }
+          msbuild external\softcam\src\softcam\softcam_vs2019.vcxproj /p:Configuration=Release /p:Platform=Win32 /m
 
       # ---------- Build Installer ----------
       - name: Build Softcam Installer x64
-        shell: pwsh
+        shell: cmd
         run: |
-          $installerSln = Get-ChildItem -Path external/softcam -Filter "softcam_installer.sln" -Recurse | Select-Object -First 1
-          if ($installerSln) {
-            Write-Host "Installer solution ditemukan: $($installerSln.FullName)"
-            msbuild $installerSln.FullName /p:Configuration=Release /p:Platform=x64 /m
-          } else {
-            Write-Warning "softcam_installer.sln tidak ditemukan, melewati langkah ini."
-          }
+          msbuild external\softcam\examples\softcam_installer\softcam_installer_vs2019.vcxproj /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Build Softcam Installer Win32
-        shell: pwsh
+        shell: cmd
         run: |
-          $installerSln = Get-ChildItem -Path external/softcam -Filter "softcam_installer.sln" -Recurse | Select-Object -First 1
-          if ($installerSln) {
-            msbuild $installerSln.FullName /p:Configuration=Release /p:Platform=Win32 /m
-          } else {
-            Write-Warning "softcam_installer.sln tidak ditemukan, melewati langkah ini."
-          }
+          msbuild external\softcam\examples\softcam_installer\softcam_installer_vs2019.vcxproj /p:Configuration=Release /p:Platform=Win32 /m
 
       # ---------- Download stb headers ----------
       - name: Download stb headers
@@ -107,10 +73,12 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           if (Test-Path sender.exe) { Copy-Item sender.exe dist\ }
           if (Test-Path assets\fotoorang2.jpeg) { Copy-Item assets\fotoorang2.jpeg dist\ }
+
+          # Ambil DLL yang sudah di-build
           if (Test-Path external\softcam\dist\bin\x64\softcam.dll) { Copy-Item external\softcam\dist\bin\x64\softcam.dll dist\ }
           if (Test-Path external\softcam\dist\bin\Win32\softcam.dll) { Copy-Item external\softcam\dist\bin\Win32\softcam.dll dist\softcam_x86.dll }
 
-          # Cari installer secara dinamis (karena path bisa sedikit berbeda)
+          # Cari installer secara dinamis di folder output-nya
           $inst64 = Get-ChildItem -Path external\softcam -Filter "softcam_installer.exe" -Recurse | Where-Object { $_.FullName -match "x64" } | Select-Object -First 1
           $inst32 = Get-ChildItem -Path external\softcam -Filter "softcam_installer.exe" -Recurse | Where-Object { $_.FullName -match "Win32" } | Select-Object -First 1
 
