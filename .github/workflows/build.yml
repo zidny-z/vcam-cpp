@@ -33,44 +33,53 @@ jobs:
           Write-Host "--- Mencari file .sln ---"
           if (Test-Path external/softcam) { Get-ChildItem -Path external/softcam -Filter *.sln -Recurse }
 
-      # ---------- Build Softcam DLL ----------
+# ---------- Build Softcam DLL ----------
       - name: Build Softcam x64
-        shell: cmd
+        shell: pwsh
         run: |
-          if exist external\softcam\softcam.sln (
-            msbuild external\softcam\softcam.sln /p:Configuration=Release /p:Platform=x64 /m
-          ) else if exist external\softcam\softcam_vs2019.sln (
-            msbuild external\softcam\softcam_vs2019.sln /p:Configuration=Release /p:Platform=x64 /m
-          ) else (
-            echo "Solution file tidak ditemukan!" & exit /b 1
-          )
+          $sln = Get-ChildItem -Path external/softcam -Filter *.sln -Recurse | Select-Object -First 1
+          if ($sln) {
+            Write-Host "Solution ditemukan: $($sln.FullName)"
+            msbuild $sln.FullName /p:Configuration=Release /p:Platform=x64 /m
+          } else {
+            Write-Error "File .sln tidak ditemukan di folder external/softcam! Periksa konfigurasi git submodule."
+            Write-Host "--- Debug Isi Folder external ---"
+            Get-ChildItem -Path external -Recurse -ErrorAction SilentlyContinue
+            exit 1
+          }
 
       - name: Build Softcam Win32
-        shell: cmd
+        shell: pwsh
         run: |
-          if exist external\softcam\softcam.sln (
-            msbuild external\softcam\softcam.sln /p:Configuration=Release /p:Platform=Win32 /m
-          ) else if exist external\softcam\softcam_vs2019.sln (
-            msbuild external\softcam\softcam_vs2019.sln /p:Configuration=Release /p:Platform=Win32 /m
-          ) else (
-            echo "Solution file tidak ditemukan!" & exit /b 1
-          )
+          $sln = Get-ChildItem -Path external/softcam -Filter *.sln -Recurse | Select-Object -First 1
+          if ($sln) {
+            msbuild $sln.FullName /p:Configuration=Release /p:Platform=Win32 /m
+          } else {
+            Write-Error "File .sln tidak ditemukan!"
+            exit 1
+          }
 
       # ---------- Build Installer ----------
       - name: Build Softcam Installer x64
-        shell: cmd
+        shell: pwsh
         run: |
-          if exist external\softcam\examples\softcam_installer\softcam_installer.sln (
-            msbuild external\softcam\examples\softcam_installer\softcam_installer.sln /p:Configuration=Release /p:Platform=x64 /m
-          )
+          $installerSln = Get-ChildItem -Path external/softcam -Filter "softcam_installer.sln" -Recurse | Select-Object -First 1
+          if ($installerSln) {
+            Write-Host "Installer solution ditemukan: $($installerSln.FullName)"
+            msbuild $installerSln.FullName /p:Configuration=Release /p:Platform=x64 /m
+          } else {
+            Write-Warning "softcam_installer.sln tidak ditemukan, melewati langkah ini."
+          }
 
       - name: Build Softcam Installer Win32
-        shell: cmd
+        shell: pwsh
         run: |
-          if exist external\softcam\examples\softcam_installer\softcam_installer.sln (
-            msbuild external\softcam\examples\softcam_installer\softcam_installer.sln /p:Configuration=Release /p:Platform=Win32 /m
-          )
-
+          $installerSln = Get-ChildItem -Path external/softcam -Filter "softcam_installer.sln" -Recurse | Select-Object -First 1
+          if ($installerSln) {
+            msbuild $installerSln.FullName /p:Configuration=Release /p:Platform=Win32 /m
+          } else {
+            Write-Warning "softcam_installer.sln tidak ditemukan, melewati langkah ini."
+          }
       # ---------- Download stb headers ----------
       - name: Download stb headers
         shell: pwsh
