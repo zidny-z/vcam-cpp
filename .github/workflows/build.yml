@@ -10,11 +10,15 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout (dengan submodule)
+      - name: Checkout Repo Sender
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
+        # Kita hapus submodules: recursive karena kita akan clone manual
+
+      - name: Clone Softcam Repository
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path external | Out-Null
+          git clone --depth 1 https://github.com/tshino/softcam.git external/softcam
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -33,7 +37,7 @@ jobs:
           Write-Host "--- Mencari file .sln ---"
           if (Test-Path external/softcam) { Get-ChildItem -Path external/softcam -Filter *.sln -Recurse }
 
-# ---------- Build Softcam DLL ----------
+      # ---------- Build Softcam DLL ----------
       - name: Build Softcam x64
         shell: pwsh
         run: |
@@ -42,9 +46,7 @@ jobs:
             Write-Host "Solution ditemukan: $($sln.FullName)"
             msbuild $sln.FullName /p:Configuration=Release /p:Platform=x64 /m
           } else {
-            Write-Error "File .sln tidak ditemukan di folder external/softcam! Periksa konfigurasi git submodule."
-            Write-Host "--- Debug Isi Folder external ---"
-            Get-ChildItem -Path external -Recurse -ErrorAction SilentlyContinue
+            Write-Error "File .sln tidak ditemukan!"
             exit 1
           }
 
@@ -80,6 +82,7 @@ jobs:
           } else {
             Write-Warning "softcam_installer.sln tidak ditemukan, melewati langkah ini."
           }
+
       # ---------- Download stb headers ----------
       - name: Download stb headers
         shell: pwsh
@@ -106,8 +109,14 @@ jobs:
           if (Test-Path assets\fotoorang2.jpeg) { Copy-Item assets\fotoorang2.jpeg dist\ }
           if (Test-Path external\softcam\dist\bin\x64\softcam.dll) { Copy-Item external\softcam\dist\bin\x64\softcam.dll dist\ }
           if (Test-Path external\softcam\dist\bin\Win32\softcam.dll) { Copy-Item external\softcam\dist\bin\Win32\softcam.dll dist\softcam_x86.dll }
-          if (Test-Path external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe) { Copy-Item external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe dist\ }
-          if (Test-Path external\softcam\examples\softcam_installer\Win32\Release\softcam_installer.exe) { Copy-Item external\softcam\examples\softcam_installer\Win32\Release\softcam_installer.exe dist\softcam_installer_x86.exe }
+
+          # Cari installer secara dinamis (karena path bisa sedikit berbeda)
+          $inst64 = Get-ChildItem -Path external\softcam -Filter "softcam_installer.exe" -Recurse | Where-Object { $_.FullName -match "x64" } | Select-Object -First 1
+          $inst32 = Get-ChildItem -Path external\softcam -Filter "softcam_installer.exe" -Recurse | Where-Object { $_.FullName -match "Win32" } | Select-Object -First 1
+
+          if ($inst64) { Copy-Item $inst64.FullName dist\ }
+          if ($inst32) { Copy-Item $inst32.FullName dist\softcam_installer_x86.exe }
+
           Get-ChildItem dist
 
       - name: Upload artifact
