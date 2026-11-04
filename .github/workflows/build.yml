@@ -59,14 +59,17 @@ jobs:
 
       # ---------- Build sender.exe (x64) ----------
       - name: Compile sender
-        shell: cmd
+        shell: pwsh
         run: |
-          cl /EHsc /O2 /std:c++17 /Tp src\sender.cpp ^
-             /I "external\softcam\dist\include\softcam" ^
-             /I "external\softcam\dist\include" ^
-             /link /LIBPATH:"external\softcam\dist\lib\x64" softcam.lib ^
-             user32.lib gdi32.lib ole32.lib oleaut32.lib uuid.lib ^
-             /OUT:sender.exe
+          $inc = "${{ github.workspace }}\external\softcam\dist\include"
+          $lib = "${{ github.workspace }}\external\softcam\dist\lib\x64"
+
+          # Tampilkan isi folder untuk memastikan file header ada
+          Write-Host "Isi folder include:"
+          Get-ChildItem -Path $inc -Recurse
+
+          # Compile dalam satu baris utuh tanpa tanda ^
+          cl.exe /EHsc /O2 /std:c++17 /Tp src\sender.cpp /I "$inc" /link /LIBPATH:"$lib" softcam.lib user32.lib gdi32.lib ole32.lib oleaut32.lib uuid.lib /OUT:sender.exe
 
       # ---------- Paket artifact ----------
       - name: Package
