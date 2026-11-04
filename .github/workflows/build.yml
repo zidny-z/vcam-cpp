@@ -57,19 +57,19 @@ jobs:
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/master/stb_image.h" -OutFile "src/stb_image.h"
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/master/deprecated/stb_image_resize.h" -OutFile "src/stb_image_resize.h"
 
-      # ---------- Build sender.exe (x64) ----------
+# ---------- Build sender.exe (x64) ----------
       - name: Compile sender
         shell: pwsh
         run: |
-          $inc = "${{ github.workspace }}\external\softcam\include"
-          $lib = "${{ github.workspace }}\external\softcam\src\softcam\x64\Release"
+          $inc = "${{ github.workspace }}\external\softcam\src\softcam\dist\include"
+          $lib = "${{ github.workspace }}\external\softcam\src\softcam\dist\lib\x64"
 
           Write-Host "Verifying include directory:"
           Get-ChildItem -Path $inc -Recurse
 
           cl.exe /EHsc /O2 /std:c++17 /Tp src\sender.cpp /I "$inc" /I "src" /link /LIBPATH:"$lib" softcam.lib user32.lib gdi32.lib ole32.lib oleaut32.lib uuid.lib /OUT:sender.exe
 
-      # ---------- Package Artifacts ----------
+      # ---------- Paket artifact ----------
       - name: Package
         shell: pwsh
         run: |
@@ -77,25 +77,14 @@ jobs:
           if (Test-Path sender.exe) { Copy-Item sender.exe dist\ }
           if (Test-Path assets\fotoorang2.jpeg) { Copy-Item assets\fotoorang2.jpeg dist\ }
 
-          # Copy Softcam DLLs
-          if (Test-Path external\softcam\src\softcam\x64\Release\softcam.dll) {
-              Copy-Item external\softcam\src\softcam\x64\Release\softcam.dll dist\
-          }
-          if (Test-Path external\softcam\src\softcam\Release\softcam.dll) {
-              Copy-Item external\softcam\src\softcam\Release\softcam.dll dist\softcam_x86.dll
-          } elseif (Test-Path external\softcam\src\softcam\Win32\Release\softcam.dll) {
-              Copy-Item external\softcam\src\softcam\Win32\Release\softcam.dll dist\softcam_x86.dll
-          }
+          if (Test-Path external\softcam\src\softcam\dist\bin\x64\softcam.dll) { Copy-Item external\softcam\src\softcam\dist\bin\x64\softcam.dll dist\ }
+          if (Test-Path external\softcam\src\softcam\dist\bin\Win32\softcam.dll) { Copy-Item external\softcam\src\softcam\dist\bin\Win32\softcam.dll dist\softcam_x86.dll }
 
-          # Copy Installers
-          if (Test-Path external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe) {
-              Copy-Item external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe dist\
-          }
-          if (Test-Path external\softcam\examples\softcam_installer\Release\softcam_installer.exe) {
-              Copy-Item external\softcam\examples\softcam_installer\Release\softcam_installer.exe dist\softcam_installer_x86.exe
-          } elseif (Test-Path external\softcam\examples\softcam_installer\Win32\Release\softcam_installer.exe) {
-              Copy-Item external\softcam\examples\softcam_installer\Win32\Release\softcam_installer.exe dist\softcam_installer_x86.exe
-          }
+          $inst64 = Get-ChildItem -Path external\softcam -Filter "softcam_installer.exe" -Recurse | Where-Object { $_.FullName -match "x64" } | Select-Object -First 1
+          $inst32 = Get-ChildItem -Path external\softcam -Filter "softcam_installer.exe" -Recurse | Where-Object { $_.FullName -match "Win32" } | Select-Object -First 1
+
+          if ($inst64) { Copy-Item $inst64.FullName dist\ }
+          if ($inst32) { Copy-Item $inst32.FullName dist\softcam_installer_x86.exe }
 
           Get-ChildItem dist
 
