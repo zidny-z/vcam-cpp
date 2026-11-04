@@ -1,0 +1,73 @@
+name: Build VCam Sender
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout (dengan submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      # ---------- Build Softcam DLL ----------
+      - name: Build Softcam x64
+        run: msbuild external/softcam/src/softcam/softcam.vcxproj /p:Configuration=Release /p:Platform=x64 /m
+
+      - name: Build Softcam Win32
+        run: msbuild external/softcam/src/softcam/softcam.vcxproj /p:Configuration=Release /p:Platform=Win32 /m
+
+      # ---------- Build Installer ----------
+      - name: Build Softcam Installer x64
+        run: msbuild external/softcam/examples/softcam_installer/softcam_installer.vcxproj /p:Configuration=Release /p:Platform=x64 /m
+
+      - name: Build Softcam Installer Win32
+        run: msbuild external/softcam/examples/softcam_installer/softcam_installer.vcxproj /p:Configuration=Release /p:Platform=Win32 /m
+
+      # ---------- Download stb headers ----------
+      - name: Download stb headers
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/master/stb_image.h" -OutFile "src/stb_image.h"
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/nothings/stb/master/stb_image_resize.h" -OutFile "src/stb_image_resize.h"
+
+      # ---------- Build sender.exe (x64) ----------
+      - name: Setup MSVC dev environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Compile sender
+        shell: cmd
+        run: |
+          cl /EHsc /O2 /std:c++17 /I external\softcam\dist\include src\sender.cpp ^
+             /link /LIBPATH:external\softcam\dist\lib\x64 softcam.lib ^
+             user32.lib gdi32.lib ole32.lib oleaut32.lib uuid.lib ^
+             /OUT:sender.exe
+
+      # ---------- Paket artifact ----------
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item sender.exe dist\
+          Copy-Item assets\fotoorang2.jpeg dist\
+          Copy-Item external\softcam\dist\bin\x64\softcam.dll dist\
+          Copy-Item external\softcam\dist\bin\Win32\softcam.dll dist\softcam_x86.dll
+          Copy-Item external\softcam\examples\softcam_installer\x64\Release\softcam_installer.exe dist\
+          Copy-Item external\softcam\examples\softcam_installer\Win32\Release\softcam_installer.exe dist\softcam_installer_x86.exe
+          Get-ChildItem dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcam-sender-win64
+          path: dist/
