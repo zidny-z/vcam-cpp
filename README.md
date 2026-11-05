@@ -1,6 +1,6 @@
 # v-cam-sender
 
-Virtual camera sender untuk Windows 10, kompatibel dengan Chrome & Firefox.
+Virtual camera sender untuk Windows 10/11, kompatibel dengan Chrome & Firefox.
 Menggunakan [Softcam](https://github.com/tshino/softcam) sebagai DirectShow filter.
 
 ## Komponen
@@ -16,23 +16,31 @@ menghasilkan artifact `vcam-sender-win64` yang berisi:
 
 - `sender.exe` (x64)
 - `fotoorang2.jpeg`
-- `softcam.dll` (x64) dan `softcam_x86.dll` (Win32)
-- `softcam_installer.exe` (x64) dan `softcam_installer_x86.exe` (Win32)
-- `register.bat` dan `register_x86.bat`
+- `softcam.dll` (x64)
+- `softcam_x86.dll` (Win32, untuk aplikasi 32-bit)
 
-`sender.exe` membaca gambar relatif terhadap lokasi `sender.exe`, jadi letakkan
-`fotoorang2.jpeg` di folder yang sama (atau di subfolder `assets\`).
+Tidak ada installer dan tidak ada langkah registrasi manual. `sender.exe` membaca gambar relatif
+terhadap lokasi `sender.exe`, jadi letakkan `fotoorang2.jpeg` di folder yang sama (atau di
+subfolder `assets\`).
 
 ## Deploy
 
-1. Ekstrak artifact ke satu folder. Jangan pindahkan file setelah registrasi, karena
-   installer menyimpan path absolut ke `softcam.dll`.
-2. Klik kanan `register.bat` → **Run as administrator** (mendaftarkan `softcam.dll` x64).
-   Jika ada aplikasi 32-bit yang perlu memakai kamera ini, jalankan juga `register_x86.bat`.
-3. Jalankan `sender.exe`. Console akan menampilkan
-   `Select "DirectShow Softcam" as the camera in your app`.
-4. Di aplikasi kamera (Chrome/Edge/Firefox/Zoom), pilih kamera **DirectShow Softcam**.
-5. Restart browser jika kamera belum muncul di daftar.
+1. Ekstrak artifact ke satu folder.
+2. Jalankan `sender.exe`. Saat pertama dijalankan, aplikasi mendaftarkan kamera
+   **DirectShow Softcam** untuk user saat ini (per-user, **tanpa admin**).
+   Biarkan jendela console tetap terbuka selama kamera dipakai.
+3. Di aplikasi kamera (Chrome/Edge/Firefox/Zoom), pilih kamera **DirectShow Softcam**.
+4. Restart browser jika kamera belum muncul di daftar.
+
+Jika folder dipindah, cukup jalankan `sender.exe` lagi; path DLL akan diperbarui otomatis.
+
+### Perintah
+
+```
+sender.exe                 register (per-user) lalu jalankan kamera
+sender.exe --register      register saja
+sender.exe --unregister    hapus registrasi untuk user ini
+```
 
 ### Masih muncul OBS?
 
@@ -45,13 +53,12 @@ output OBS. Pilih salah satu:
   **DirectShow Softcam** di OBS, lalu klik **Start Virtual Camera** dan pilih
   `OBS Virtual Camera` di aplikasi.
 
-`regsvr32 softcam.dll` bisa dipakai sebagai alternatif `register.bat`, tetapi harus dijalankan
-dari Command Prompt **as Administrator** dengan path lengkap ke DLL.
-
 ## Troubleshooting
 
 - `fotoorang2.jpeg failed to load` — pastikan gambar ada di folder yang sama dengan
-  `sender.exe` (atau di subfolder `assets\`). Pesan error sekarang menampilkan alasan dari
-  stb dan direktori kerja saat ini.
-- `scCreateCamera failed` — `softcam.dll` belum terdaftar, masih ada `sender.exe` lain yang
-  berjalan (hanya satu instance yang diizinkan), atau arsitektur DLL tidak cocok.
+  `sender.exe` (atau di subfolder `assets\`). Pesan error menampilkan alasan dari stb dan
+  direktori kerja saat ini.
+- `scCreateCamera failed` — masih ada `sender.exe` lain yang berjalan (hanya satu instance yang
+  diizinkan), atau `softcam.dll` tidak cocok dengan arsitektur `sender.exe` (x64).
+- Kamera belum muncul di browser — tutup lalu buka ulang browser. Beberapa aplikasi hanya
+  membaca daftar kamera saat start.

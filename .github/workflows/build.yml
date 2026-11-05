@@ -38,17 +38,6 @@ jobs:
         run: |
           msbuild external\softcam\src\softcam\softcam_vs2019.vcxproj /p:Configuration=Release /p:Platform=Win32 /m
 
-      # ---------- Build Installer ----------
-      - name: Build Softcam Installer x64
-        shell: cmd
-        run: |
-          msbuild external\softcam\examples\softcam_installer\softcam_installer_vs2019.vcxproj /p:Configuration=Release /p:Platform=x64 /m
-
-      - name: Build Softcam Installer Win32
-        shell: cmd
-        run: |
-          msbuild external\softcam\examples\softcam_installer\softcam_installer_vs2019.vcxproj /p:Configuration=Release /p:Platform=Win32 /m
-
       # ---------- Download stb headers ----------
       - name: Download stb headers
         shell: pwsh
@@ -62,12 +51,11 @@ jobs:
         shell: pwsh
         run: |
           $inc = "${{ github.workspace }}\external\softcam\src\softcam\dist\include"
-          $lib = "${{ github.workspace }}\external\softcam\src\softcam\dist\lib\x64"
 
           Write-Host "Verifying include directory:"
           Get-ChildItem -Path $inc -Recurse
 
-          cl.exe /EHsc /O2 /std:c++17 /Tp src\sender.cpp /I "$inc" /I "src" /link /LIBPATH:"$lib" softcam.lib user32.lib gdi32.lib ole32.lib oleaut32.lib uuid.lib /OUT:sender.exe
+          cl.exe /EHsc /O2 /std:c++17 /Tp src\sender.cpp /I "$inc" /I "src" /link advapi32.lib /OUT:sender.exe
 
       # ---------- Paket artifact ----------
       - name: Package
@@ -82,34 +70,8 @@ jobs:
           }
           Copy-Item external\softcam\src\softcam\dist\bin\x64\softcam.dll dist\
 
-          $inst64 = Get-ChildItem -Path external\softcam -Filter "softcam_installer.exe" -Recurse |
-            Where-Object { $_.FullName -match "x64" } | Select-Object -First 1
-          if (-not $inst64) {
-            throw "softcam_installer.exe (x64) was not produced by the installer build"
-          }
-          Copy-Item $inst64.FullName dist\
-
-          # x64 registration is what sender.exe needs; both must point at the DLL next to this script.
-          Set-Content -Path dist\register.bat -Encoding ASCII -Value @(
-            '@echo off',
-            'cd /d "%~dp0"',
-            '"%~dp0softcam_installer.exe" register "%~dp0softcam.dll"',
-            'if errorlevel 1 pause'
-          )
-
           if (Test-Path external\softcam\src\softcam\dist\bin\Win32\softcam.dll) {
             Copy-Item external\softcam\src\softcam\dist\bin\Win32\softcam.dll dist\softcam_x86.dll
-            $inst32 = Get-ChildItem -Path external\softcam -Filter "softcam_installer.exe" -Recurse |
-              Where-Object { $_.FullName -match "Win32" } | Select-Object -First 1
-            if ($inst32) {
-              Copy-Item $inst32.FullName dist\softcam_installer_x86.exe
-              Set-Content -Path dist\register_x86.bat -Encoding ASCII -Value @(
-                '@echo off',
-                'cd /d "%~dp0"',
-                '"%~dp0softcam_installer_x86.exe" register "%~dp0softcam_x86.dll"',
-                'if errorlevel 1 pause'
-              )
-            }
           }
 
           Get-ChildItem dist
